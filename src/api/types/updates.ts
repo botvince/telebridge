@@ -456,7 +456,14 @@ export type ApiUpdateGroupCallConnectionState = {
   isSpeakerDisabled?: boolean;
 };
 
+export type ApiUpdateBridgeKey = {
+  '@type': 'updateBridgeKey';
+  chatId?: string;
+  key?: string;
+};
+
 export type ApiUpdate = (
+  ApiUpdateBridgeKey |
   ApiUpdateReady | ApiUpdateSession |
   ApiUpdateAuthorizationState | ApiUpdateAuthorizationError | ApiUpdateConnectionState | ApiUpdateCurrentUser |
   ApiUpdateChat | ApiUpdateChatInbox | ApiUpdateChatTypingStatus | ApiUpdateChatFullInfo | ApiUpdatePinnedChatIds |

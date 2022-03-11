@@ -54,6 +54,7 @@ type StateProps = {
   canAddContact?: boolean;
   canDeleteChat?: boolean;
   hasLinkedChat?: boolean;
+  isBridged?: boolean;
 };
 
 const HeaderMenuContainer: FC<OwnProps & StateProps> = ({
@@ -78,6 +79,7 @@ const HeaderMenuContainer: FC<OwnProps & StateProps> = ({
   canDeleteChat,
   hasLinkedChat,
   canAddContact,
+  isBridged,
   onSubscribeChannel,
   onSearchClick,
   onClose,
@@ -94,7 +96,14 @@ const HeaderMenuContainer: FC<OwnProps & StateProps> = ({
     addContact,
     openCallFallbackConfirm,
     toggleStatistics,
+    sendMessage,
   } = getDispatch();
+
+  //PIN: Keysync button
+  const keysync = () => {    
+    //PIN: Sending test message
+    sendMessage({text: "test"})
+  }
 
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -244,6 +253,14 @@ const HeaderMenuContainer: FC<OwnProps & StateProps> = ({
               {lang('Search')}
             </MenuItem>
           )}
+          
+          <MenuItem
+            icon={isBridged ? 'unmute' : 'mute'}
+            onClick={keysync}
+          >
+            Keysync
+          </MenuItem>
+          
           {canMute && (
             <MenuItem
               icon={isMuted ? 'unmute' : 'mute'}

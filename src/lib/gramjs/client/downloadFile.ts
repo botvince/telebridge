@@ -23,6 +23,7 @@ export interface DownloadFileParams {
     start?: number;
     end?: number;
     progressCallback?: progressCallback;
+    key?: string;
 }
 
 interface Deferred {
@@ -74,9 +75,11 @@ export async function downloadFile(
         partSizeKb, end,
     } = fileParams;
     const {
-        fileSize, workers = 1,
+        fileSize, workers = 1, key
     } = fileParams;
     const { dcId, progressCallback, start = 0 } = fileParams;
+
+    //console.log("[BRIDGE] 'downloadFile' called in downloadFile.ts", key ? ". Key exists!" : "No key found!");
 
     end = end && end < fileSize ? end : fileSize - 1;
 

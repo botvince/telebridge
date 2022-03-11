@@ -32,6 +32,12 @@ export interface IThemeSettings {
   isBlurred?: boolean;
 }
 
+export type BridgeSettings = {
+  privateKey?: string;
+  test?: string;
+  chatKeys?: Record<string, string>;
+}
+
 export type NotifySettings = {
   hasPrivateChatsNotifications?: boolean;
   hasPrivateChatsMessagePreview?: boolean;
@@ -52,7 +58,7 @@ export type LangCode = (
 
 export type TimeFormat = '24h' | '12h';
 
-export interface ISettings extends NotifySettings, Record<string, any> {
+export interface ISettings extends BridgeSettings, NotifySettings, Record<string, any> {
   theme: ThemeKey;
   shouldUseSystemTheme: boolean;
   messageTextSize: number;
@@ -159,6 +165,7 @@ export enum SettingsScreens {
   Notifications,
   DataStorage,
   Language,
+  Bridge,
   General,
   GeneralChatBackground,
   GeneralChatBackgroundColor,

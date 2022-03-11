@@ -5,6 +5,7 @@ import TelegramClient from './TelegramClient';
 import { generateRandomBytes, readBigIntFromBuffer, sleep } from '../Helpers';
 import { getAppropriatedPartSize } from '../Utils';
 import errors from '../errors';
+import { addBufferStamp, encryptBuffer } from '../../../modules/helpers/bridgeCrypto';
 
 interface OnProgress {
     isCanceled?: boolean;
@@ -17,6 +18,7 @@ export interface UploadFileParams {
     file: File;
     workers: number;
     onProgress?: OnProgress;
+    key?: string;
 }
 
 const KB_TO_BYTES = 1024;
@@ -27,16 +29,34 @@ export async function uploadFile(
     client: TelegramClient,
     fileParams: UploadFileParams,
 ): Promise<Api.InputFile | Api.InputFileBig> {
-    const { file, onProgress } = fileParams;
-    let { workers } = fileParams;
 
-    const { name, size } = file;
+    //console.info("[BRIDGE] Called 'uploadFile' in uploadFile.ts");
+    const { file, onProgress } = fileParams;
+    let { workers, key } = fileParams;
+
+    const { name } = file;
+    var { size } = file;
     const fileId = readBigIntFromBuffer(generateRandomBytes(8), true, true);
+    var buffer = Buffer.from(await fileToBuffer(file));
+
+    //console.log("[BRIDGE] submitted data:", buffer, ", size:", size);
+
+    //console.log("[BRIDGE] KEY IN UPLOAD:", key);
+    //Encrypt outgoing data
+    if(key) {
+        buffer = encryptBuffer(addBufferStamp(buffer), key);
+        size = buffer.byteLength;
+        //console.log("[BRIDGE] uploading encrypted data:", buffer, ", size:", size);
+        console.log("[BRIDGE] uploading encrypted data with size:", size);
+    }else{
+        console.log("[BRIDGE] not encrypting file!");
+    }
+    
+
     const isLarge = size > LARGE_FILE_THRESHOLD;
 
     const partSize = getAppropriatedPartSize(size) * KB_TO_BYTES;
     const partCount = Math.floor((size + partSize - 1) / partSize);
-    const buffer = Buffer.from(await fileToBuffer(file));
 
     // Make sure a new sender can be created before starting upload
     await client.getSender(client.session.dcId);

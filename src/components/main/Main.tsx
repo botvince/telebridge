@@ -50,6 +50,7 @@ import ActiveCallHeader from '../calls/ActiveCallHeader.async';
 import CallFallbackConfirm from '../calls/CallFallbackConfirm.async';
 
 import './Main.scss';
+import PasswordDialog from '../bridge/PasswordDialog';
 
 type StateProps = {
   connectionState?: ApiUpdateConnectionStateType;
@@ -333,6 +334,7 @@ const Main: FC<StateProps> = ({
       <DownloadManager />
       <CallFallbackConfirm isOpen={isCallFallbackConfirmOpen} />
       <UnreadCount isForAppBadge />
+      <PasswordDialog />
     </div>
   );
 };

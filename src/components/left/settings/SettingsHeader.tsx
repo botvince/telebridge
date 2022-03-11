@@ -91,6 +91,8 @@ const SettingsHeader: FC<OwnProps> = ({
         return <h3>{lang('DoubleTapSetting')}</h3>;
       case SettingsScreens.Notifications:
         return <h3>{lang('Notifications')}</h3>;
+      case SettingsScreens.Bridge:
+        return <h3>{lang('Bridge')}</h3>;
       case SettingsScreens.DataStorage:
         return <h3>{lang('DataSettings')}</h3>;
       case SettingsScreens.Privacy:

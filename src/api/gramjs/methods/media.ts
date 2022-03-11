@@ -13,6 +13,9 @@ import {
 import localDb from '../localDb';
 import { getEntityTypeById } from '../gramjsBuilders';
 import * as cacheApi from '../../../util/cacheApi';
+import { addBufferStamp, checkBufferStamp, decryptBuffer, removeBufferStamp } from '../../../modules/helpers/bridgeCrypto';
+import { getGlobal } from '../../../lib/teact/teactn';
+import { selectCurrentChat } from '../../../modules/selectors/messages';
 
 type EntityType = (
   'msg' | 'sticker' | 'wallpaper' | 'gif' | 'channel' | 'chat' | 'user' | 'photo' | 'stickerSet' | 'webDocument' |
@@ -22,23 +25,53 @@ type EntityType = (
 const MEDIA_ENTITY_TYPES = new Set(['msg', 'sticker', 'gif', 'wallpaper', 'photo', 'webDocument', 'document']);
 const TGS_MIME_TYPE = 'application/x-tgsticker';
 
+type DownloadType = { 
+  data: ArrayBuffer; 
+  mimeType?: string; 
+  fullSize?: number;
+} | any;
+
 export default async function downloadMedia(
   {
-    url, mediaFormat, start, end, isHtmlAllowed,
+    url, mediaFormat, start, end, isHtmlAllowed, key,
   }: {
-    url: string; mediaFormat: ApiMediaFormat; start?: number; end?: number; isHtmlAllowed?: boolean;
+    url: string; mediaFormat: ApiMediaFormat; start?: number; end?: number; isHtmlAllowed?: boolean; key?: string;
   },
   client: TelegramClient,
   isConnected: boolean,
   onProgress?: ApiOnProgress,
 ) {
-  const {
-    data, mimeType, fullSize,
-  } = await download(url, client, isConnected, onProgress, start, end, mediaFormat, isHtmlAllowed) || {};
+  const downloaded: DownloadType = await download(url, client, isConnected, onProgress, start, end, mediaFormat, isHtmlAllowed, key) || {};
+  var {
+    data, mimeType, fullSize
+  } = downloaded;
   if (!data) {
     return undefined;
   }
 
+  //console.log("[BRIDGE] 'downloadMedia' in media.ts");
+  //console.log("[BRIDGE] downloading data:", data, ", size: ", fullSize);
+  //MEDIA PIN Download
+
+  //console.log("[BRIDGE] KEY IN DOWNLOAD:", key);
+  //console.log("[BRIDGE] DATA IN DOWNLOAD:", data);
+  //Decrypt incoming data
+  if(key) {
+    var decryptedData = decryptBuffer(data, key);
+    var hasStamp = checkBufferStamp(decryptedData);
+    if(hasStamp){
+      //console.log("[BRIDGE] Stamp detected! Decryption success!");
+      data = removeBufferStamp(decryptedData);
+    }else{
+      //console.log("[BRIDGE] Stamp not detected! Decryption failed, using unencrypted data!");
+    }
+    fullSize = data.byteLength;
+    //console.log("[BRIDGE] decrypted data:", data, ", size: ", fullSize);    
+  }else{
+    //console.log("[BRIDGE] not decrypting file!");
+  }
+  
+  
   const parsed = await parseMedia(data, mediaFormat, mimeType);
   if (!parsed) {
     return undefined;
@@ -73,6 +106,7 @@ async function download(
   end?: number,
   mediaFormat?: ApiMediaFormat,
   isHtmlAllowed?: boolean,
+  key?: string,
 ) {
   const mediaMatch = url.startsWith('staticMap')
     ? url.match(/(staticMap):([0-9-]+)(\?.+)/)
@@ -85,10 +119,30 @@ async function download(
     return undefined;
   }
 
+  //console.info("[BRIDGE] Called 'download' in media.ts, key:", key);
+
   if (mediaMatch[1] === 'file') {
     const response = await fetch(mediaMatch[2]);
     const data = await response.arrayBuffer();
-    return { data };
+    if(key){
+      //console.log("[BRIDGE] File Download!");
+      var buffer = Buffer.from(data);
+      buffer = decryptBuffer(buffer, key);
+      //console.log("[BRIDGE] key: ", key);
+      //console.log("[BRIDGE] Decrypted Data: ", buffer);
+      var hasStamp = checkBufferStamp(buffer);
+      if(hasStamp){
+        //console.log("[BRIDGE] Stamp detected! Decryption success!");
+        buffer = removeBufferStamp(buffer);
+        return { data: buffer.buffer };
+      }else{
+        //console.log("[BRIDGE] Stamp not detected! Decryption failed, using unencrypted data!");
+        return { data };
+      }
+    }else{
+      return { data };
+    }
+    
   }
 
   if (!isConnected) {
@@ -171,8 +225,8 @@ async function download(
     }
 
     const data = await client.downloadMedia(entity, {
-      sizeType, start, end, progressCallback: onProgress, workers: DOWNLOAD_WORKERS,
-    });
+      key, sizeType, start, end, progressCallback: onProgress, workers: DOWNLOAD_WORKERS,
+    }, key);
     let mimeType;
     let fullSize;
 

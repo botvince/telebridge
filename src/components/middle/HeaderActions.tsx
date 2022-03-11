@@ -32,6 +32,7 @@ import useLang from '../../hooks/useLang';
 
 import Button from '../ui/Button';
 import HeaderMenuContainer from './HeaderMenuContainer.async';
+import { addBufferStamp, checkBufferStamp, decryptBuffer, encryptBuffer, removeBufferStamp } from '../../modules/helpers/bridgeCrypto';
 
 interface OwnProps {
   chatId: string;
@@ -55,6 +56,7 @@ interface StateProps {
   canEnterVoiceChat?: boolean;
   canCreateVoiceChat?: boolean;
   pendingJoinRequests?: number;
+  isBridged?: boolean;
 }
 
 // Chrome breaks layout when focusing input during transition
@@ -78,6 +80,7 @@ const HeaderActions: FC<OwnProps & StateProps> = ({
   pendingJoinRequests,
   isRightColumnShown,
   canExpandActions,
+  isBridged
 }) => {
   const {
     joinChannel,
@@ -87,6 +90,24 @@ const HeaderActions: FC<OwnProps & StateProps> = ({
     openCallFallbackConfirm,
     requestNextManagementScreen,
   } = getDispatch();
+
+  const keysync = () => {
+    console.log("[BRIDGE] STARTED TEST");
+    var buffer = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    var stamped = addBufferStamp(buffer);
+    var encrypted = encryptBuffer(stamped, "test");
+    var decrypted = decryptBuffer(encrypted, "test");
+    var check = checkBufferStamp(decrypted);
+    var destamped = removeBufferStamp(decrypted);
+
+    console.log("[BRIDGE] Results:");
+    console.log("[BRIDGE] buffer:", buffer);
+    console.log("[BRIDGE] stamped:", stamped);
+    console.log("[BRIDGE] encrypted:", encrypted);
+    console.log("[BRIDGE] decrypted:", decrypted);
+    console.log("[BRIDGE] check:", check);
+    console.log("[BRIDGE] destamped:", destamped);
+}
 
   // eslint-disable-next-line no-null/no-null
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -220,6 +241,21 @@ const HeaderActions: FC<OwnProps & StateProps> = ({
               <i className="icon-phone" />
             </Button>
           )}
+
+          <Button
+            round
+            color="translucent"
+            size="smaller"
+            onClick={keysync}
+            ariaLabel="Keysync"
+          >
+          {isBridged ? (
+            <i className="icon-lock" />
+          ) : (
+            <i className="icon-unlock" />
+          )}
+          </Button>
+            
         </>
       )}
       {Boolean(pendingJoinRequests) && (

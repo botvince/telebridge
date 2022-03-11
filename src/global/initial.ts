@@ -16,6 +16,19 @@ export const INITIAL_STATE: GlobalState = {
   uiReadyState: 0,
   serverTimeOffset: 0,
 
+  /**
+   *  + Bridge State Object Initial State
+   */
+  bridge: {
+    password: "",
+    passwordControl: "",
+    privateKey: "",
+    encryptedPrivKey: "",
+    unlocked: true,
+    symKeys: {},
+    encryptedSymKeys: {},
+  },
+
   authRememberMe: true,
   countryList: {
     phoneCodes: [],

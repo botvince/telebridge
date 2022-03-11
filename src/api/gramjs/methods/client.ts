@@ -262,14 +262,14 @@ function handleUpdatesFromRequest<T extends GramJs.AnyRequest>(request: T, resul
 }
 
 export function downloadMedia(
-  args: { url: string; mediaFormat: ApiMediaFormat; start?: number; end?: number; isHtmlAllowed?: boolean },
+  args: { url: string; mediaFormat: ApiMediaFormat; start?: number; end?: number; isHtmlAllowed?: boolean; key?: string },
   onProgress?: ApiOnProgress,
 ) {
   return downloadMediaWithClient(args, client, isConnected, onProgress);
 }
 
-export function uploadFile(file: File, onProgress?: ApiOnProgress) {
-  return client.uploadFile({ file, onProgress, workers: UPLOAD_WORKERS });
+export function uploadFile(file: File, onProgress?: ApiOnProgress, key?: string) {
+  return client.uploadFile({ file, onProgress, workers: UPLOAD_WORKERS, key });
 }
 
 export function updateTwoFaSettings(params: TwoFaParams) {

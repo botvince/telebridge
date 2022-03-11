@@ -222,6 +222,7 @@ addReducer('sendMessage', (global, actions, payload) => {
     sendMessage({
       ...restParams,
       attachment: attachments ? attachments[0] : undefined,
+      bridge: global.bridge,
     });
   } else if (isGrouped) {
     const {
@@ -238,6 +239,7 @@ addReducer('sendMessage', (global, actions, payload) => {
         entities: i === 0 ? entities : undefined,
         attachment: firstAttachment,
         groupedId: restAttachments.length > 0 ? groupedId : undefined,
+        bridge: global.bridge,
       });
 
       restAttachments.forEach((attachment: ApiAttachment) => {
@@ -245,6 +247,7 @@ addReducer('sendMessage', (global, actions, payload) => {
           ...commonParams,
           attachment,
           groupedId,
+          bridge: global.bridge,
         });
       });
     }

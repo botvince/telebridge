@@ -62,6 +62,10 @@ import {
 import { interpolateArray } from '../../../util/waveform';
 import { requestChatUpdate } from './chats';
 import { getApiChatIdFromMtpPeer } from '../apiBuilders/peers';
+import { getGlobal } from '../../../lib/teact/teactn';
+import { BridgeState } from '../../../global/types';
+import { COMMAND_KEYWORDS } from '../../../bridgeConfig';
+import { encryptText } from '../../../modules/helpers/bridgeCrypto';
 
 const FAST_SEND_TIMEOUT = 1000;
 const INPUT_WAVEFORM_LENGTH = 63;
@@ -192,6 +196,63 @@ export async function fetchMessage({ chat, messageId }: { chat: ApiChat; message
 
 let queue = Promise.resolve();
 
+
+/**
+ * + Bridge Command Handler 
+ */
+function handleBridgeCommand(
+  text: string, 
+  bridge: BridgeState, 
+  chat: ApiChat, 
+  sendLocalText: (text: string) => void
+){
+  var words = text.split(' ');
+  if(!words[1]) sendLocalText("NO COMMAND DETECTED");
+  else {
+    //sendLocalText(`BRIDGE COMMAND DETECTED: ${words[1]} ${words[2]||''}`);
+    sendLocalText(text);
+    switch(words[1]){
+      case 'get':
+        //console.log("PRINTING CHAT KEY");
+        if(bridge.symKeys && bridge.symKeys[chat.id])
+          sendLocalText("CHAT SYMMETRIC KEY: " + bridge.symKeys[chat.id]);
+        else sendLocalText("NO CHAT KEY SET");
+      break;
+      case 'set':
+        //console.log("SETTING CHAT KEY");
+        if(!words[2]){ 
+          sendLocalText("NO CHAT KEY GIVEN");
+          break;
+        }
+
+        onUpdate({
+          '@type': 'updateBridgeKey',
+          chatId: chat.id,
+          key: words[2],
+        });
+
+        sendLocalText("SET NEW CHAT SYMMETRIC KEY!");
+      break;
+      case 'reset':
+        //console.log("RESETTING CHAT KEY")
+
+        onUpdate({
+          '@type': 'updateBridgeKey',
+          chatId: chat.id,
+          key: undefined,
+        });
+
+        sendLocalText("RESET CHAT KEY");
+      break;
+    }
+  }
+}
+
+/**
+ * + Bridge Modifications: Typed Messages
+ * 
+ * Encrypt and catch Bridge Commands
+ */
 export function sendMessage(
   {
     chat,
@@ -209,6 +270,7 @@ export function sendMessage(
     noWebPage,
     sendAs,
     serverTimeOffset,
+    bridge
   }: {
     chat: ApiChat;
     text?: string;
@@ -225,9 +287,78 @@ export function sendMessage(
     noWebPage?: boolean;
     sendAs?: ApiUser | ApiChat;
     serverTimeOffset?: number;
+    bridge?: BridgeState;
   },
   onProgress?: ApiOnProgress,
 ) {
+
+  //PIN: Messages are being sent here
+
+  /**
+   * Send a local message to the GUI
+   */
+  const sendLocalText = (localText: string) => {
+    const localMessage = buildLocalMessage(
+      chat, localText, entities, replyingTo, attachment, sticker, gif, poll, contact, groupedId, scheduledAt,
+      sendAs, serverTimeOffset,
+    );
+
+    onUpdate({
+      '@type': localMessage.isScheduled ? 'newScheduledMessage' : 'newMessage',
+      id: localMessage.id,
+      chatId: chat.id,
+      message: localMessage,
+    });
+
+    const randomId = generateRandomBigInt();
+    localDb.localMessages[String(randomId)] = localMessage;
+  }
+
+  if(text){
+    
+  }
+  
+  //PIN: Commands
+  /**
+   * Catch and use bridge commands, initiated with a command word.
+   * No Message will be sent to server.
+   */
+  if(text){
+    var isCommand = false;
+    var keyword: string;
+    for(keyword of COMMAND_KEYWORDS){
+      if(text?.startsWith(keyword)){
+        isCommand = true;
+        break;
+      }
+    }
+
+    if(isCommand){
+      if(!bridge){
+        sendLocalText("BRIDGE COMMAND COULD NOT BE EXECUTED");
+      }else{
+        handleBridgeCommand(text, bridge, chat, sendLocalText);
+      }
+      
+      return;
+    }
+  }
+
+  /**
+   * Bridge Encrypt Text
+   */
+  var symKey = undefined;
+  if(bridge && bridge.symKeys){
+    symKey = bridge.symKeys[chat.id];
+  }
+
+  var encryptedText = undefined;
+  if(symKey && text){
+    encryptedText = encryptText(text, symKey, true);
+  }
+
+
+
   const localMessage = buildLocalMessage(
     chat, text, entities, replyingTo, attachment, sticker, gif, poll, contact, groupedId, scheduledAt,
     sendAs, serverTimeOffset,
@@ -266,7 +397,7 @@ export function sendMessage(
     let media: GramJs.TypeInputMedia | undefined;
     if (attachment) {
       try {
-        media = await uploadMedia(localMessage, attachment, onProgress!);
+        media = await uploadMedia(localMessage, attachment, onProgress!, symKey);
       } catch (err) {
         if (DEBUG) {
           // eslint-disable-next-line no-console
@@ -298,7 +429,7 @@ export function sendMessage(
 
     await invokeRequest(new RequestClass({
       clearDraft: true,
-      message: text || '',
+      message: encryptedText || text || '',
       entities: entities ? entities.map(buildMtpMessageEntity) : undefined,
       peer: buildInputPeer(chat.id, chat.accessHash),
       randomId,
@@ -345,6 +476,7 @@ function sendGroupedMedia(
   localMessage: ApiMessage,
   onProgress?: ApiOnProgress,
 ) {
+  //console.info("[BRIDGE] Called 'sendGroupedMedia' in messages.ts");
   let groupIndex = -1;
   if (!groupedUploads[groupedId]) {
     groupedUploads[groupedId] = {
@@ -423,6 +555,7 @@ async function fetchInputMedia(
   peer: GramJs.TypeInputPeer,
   uploadedMedia: GramJs.InputMediaUploadedPhoto | GramJs.InputMediaUploadedDocument,
 ) {
+  //console.info("[BRIDGE] Called 'fetchInputMedia' in messages.ts");
   const messageMedia = await invokeRequest(new GramJs.messages.UploadMedia({
     peer,
     media: uploadedMedia,
@@ -521,23 +654,31 @@ export async function rescheduleMessage({
   }), true);
 }
 
-async function uploadMedia(localMessage: ApiMessage, attachment: ApiAttachment, onProgress: ApiOnProgress) {
+async function uploadMedia(localMessage: ApiMessage, attachment: ApiAttachment, onProgress: ApiOnProgress, key?: string) {
+  
+  console.info("[BRIDGE] Called 'uploadMedia' in messages.ts");
+  //MEDIA PIN Upload
   const {
     filename, blobUrl, mimeType, quick, voice,
   } = attachment;
 
+  console.info("[BRIDGE] Attachment:", attachment);
+
   const file = await fetchFile(blobUrl, filename);
   const patchedOnProgress: ApiOnProgress = (progress) => {
+    console.info("[BRIDGE] 1");
     if (onProgress.isCanceled) {
       patchedOnProgress.isCanceled = true;
     } else {
       onProgress(progress, localMessage.id);
     }
   };
-  const inputFile = await uploadFile(file, patchedOnProgress);
+  if(quick) key = undefined; //don't handle directly sent images/videos
+  const inputFile = await uploadFile(file, patchedOnProgress, key);
 
   const attributes: GramJs.TypeDocumentAttribute[] = [new GramJs.DocumentAttributeFilename({ fileName: filename })];
   if (quick) {
+    console.info("[BRIDGE] 2");
     if (SUPPORTED_IMAGE_CONTENT_TYPES.has(mimeType)) {
       return new GramJs.InputMediaUploadedPhoto({ file: inputFile });
     }

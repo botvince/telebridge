@@ -241,6 +241,14 @@ function updateCache() {
       'leftColumnWidth',
       'serviceNotifications',
     ]),
+    bridge: { // Define what bridge items should be cached
+      symKeys: global.bridge.symKeys, //remove once local encryption is implemented
+      privateKey: global.bridge.privateKey, //remove once local encryption is implemented
+      
+      passwordControl: global.bridge.passwordControl,
+      encryptedPrivKey: global.bridge.encryptedPrivKey,
+      encryptedSymKeys: global.bridge.encryptedSymKeys,
+    },
     audioPlayer: {
       volume: global.audioPlayer.volume,
       playbackRate: global.audioPlayer.playbackRate,

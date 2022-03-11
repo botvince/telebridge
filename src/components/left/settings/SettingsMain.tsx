@@ -65,6 +65,12 @@ const SettingsMain: FC<OwnProps & StateProps> = ({
           {lang('Telegram.GeneralSettingsViewController')}
         </ListItem>
         <ListItem
+          icon="lock"
+          onClick={() => onScreenSelect(SettingsScreens.Bridge)}
+        >
+          {lang('BridgeSettings')}
+        </ListItem>
+        <ListItem
           icon="unmute"
           onClick={() => onScreenSelect(SettingsScreens.Notifications)}
         >

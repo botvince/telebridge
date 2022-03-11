@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "cross-env APP_ENV=development webpack serve --env mode=dev --env isDevServer --mode development --config ./webpack.config.js",
+    "devs": "cross-env APP_ENV=development webpack serve --env mode=dev --env isDevServer --mode development --config ./webpack.config.js --https",
     "build": "webpack --mode production",
     "build:staging": "rm -rf dist/ && APP_ENV=staging APP_VERSION=$(npm run print_version --silent) npm run build && ./deploy/copy_to_dist.sh",
     "build:production": "npm i && rm -rf dist/ && APP_VERSION=$(npm run inc_version --silent) APP_ENV=production npm run build && ./deploy/copy_to_dist.sh",
@@ -105,6 +106,7 @@
     "async-mutex": "^0.3.2",
     "big-integer": "github:painor/BigInteger.js",
     "croppie": "^2.6.5",
+    "crypto-browserify": "^3.12.0",
     "emoji-data-ios": "github:korenskoy/emoji-data-ios#162c821",
     "events": "^3.3.0",
     "idb-keyval": "^6.1.0",
@@ -113,6 +115,7 @@
     "pako": "^2.0.4",
     "path-browserify": "^1.0.1",
     "qr-creator": "^1.0.0",
+    "stream-browserify": "^3.0.0",
     "websocket": "^1.0.34"
   }
 }

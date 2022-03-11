@@ -25,7 +25,7 @@ module.exports = (env = {}, argv = {}) => {
     entry: './src/index.tsx',
     target: 'web',
     devServer: {
-      port: 1234,
+      port: 3000,
       host: '0.0.0.0',
       allowedHosts: "all",
       hot: false,
@@ -108,6 +108,8 @@ module.exports = (env = {}, argv = {}) => {
         path: require.resolve('path-browserify'),
         os: require.resolve('os-browserify/browser'),
         buffer: require.resolve('buffer/'),
+        crypto: require.resolve("crypto-browserify"),
+        stream: require.resolve("stream-browserify"),
         fs: false,
       },
     },

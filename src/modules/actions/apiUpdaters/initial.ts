@@ -10,7 +10,7 @@ import {
   ApiUpdateAuthorizationError,
   ApiUpdateConnectionState,
   ApiUpdateSession,
-  ApiUpdateCurrentUser, ApiUpdateServerTimeOffset,
+  ApiUpdateCurrentUser, ApiUpdateServerTimeOffset, ApiUpdateBridgeKey,
 } from '../../../api/types';
 import { DEBUG, SESSION_USER_KEY } from '../../../config';
 import { subscribe } from '../../../util/notifications';
@@ -19,6 +19,7 @@ import { setLanguage } from '../../../util/langProvider';
 import { selectNotifySettings } from '../../selectors';
 import { forceWebsync } from '../../../util/websync';
 import { getShippingError } from '../../../util/getReadableErrorText';
+import { encryptText } from '../../helpers/bridgeCrypto';
 
 addReducer('apiUpdate', (global, actions, update: ApiUpdate) => {
   if (DEBUG) {
@@ -29,6 +30,10 @@ addReducer('apiUpdate', (global, actions, update: ApiUpdate) => {
   }
 
   switch (update['@type']) {
+    case 'updateBridgeKey':
+      onUpdateBridgeKey(update);
+      break;
+
     case 'updateApiReady':
       onUpdateApiReady(global);
       break;
@@ -73,6 +78,45 @@ addReducer('apiUpdate', (global, actions, update: ApiUpdate) => {
     }
   }
 });
+
+function onUpdateBridgeKey(update: ApiUpdateBridgeKey) {
+  let global = getGlobal();
+
+  var password = global.bridge.password;
+  
+  if(!update.key){
+    console.log("[BRIDGE] UpdateBridgeKey: NO KEY GIVEN.");
+    return;
+  }
+  if(!global.bridge.passwordControl || !password){
+    console.log("[BRIDGE] UpdateBridgeKey: NO PASSWORD SET!");
+    password = "";
+    //return;
+  }
+  if(!global.bridge.unlocked){
+    console.log("[BRIDGE] UpdateBridgeKey: NOT UNLOCKED!");
+    //return;
+  }
+  if(!global.bridge.symKeys){
+    global.bridge.symKeys = {};
+  }
+
+  var encryptedKey = encryptText(update.key, password);
+
+  if(!update.chatId){
+    // Set key as private key if no chat id is specified
+    global.bridge.privateKey = update.key;
+    global.bridge.encryptedPrivKey = encryptedKey;
+  } else {
+    global.bridge.symKeys[update.chatId] = update.key;
+    if(!global.bridge.encryptedSymKeys) global.bridge.encryptedSymKeys = {};
+    global.bridge.encryptedSymKeys[update.chatId] = encryptedKey;
+  }
+
+  //console.log("[BRIDGE] KEY UPDATE:", global.bridge);
+
+  setGlobal(global);
+}
 
 function onUpdateApiReady(global: GlobalState) {
   const { hasWebNotifications, hasPushNotifications } = selectNotifySettings(global);

@@ -13,6 +13,7 @@ import SettingsEditProfile from './SettingsEditProfile';
 import SettingsDataStorage from './SettingsDataStorage';
 import SettingsFolders from './folders/SettingsFolders';
 import SettingsGeneral from './SettingsGeneral';
+import SettingsBridge from '../../bridge/SettingsBridge';
 import SettingsGeneralBackground from './SettingsGeneralBackground';
 import SettingsGeneralBackgroundColor from './SettingsGeneralBackgroundColor';
 import SettingsNotifications from './SettingsNotifications';
@@ -185,6 +186,11 @@ const Settings: FC<OwnProps> = ({
             || isPrivacyScreen || isFoldersScreen}
             onReset={handleReset}
           />
+        );
+      case SettingsScreens.Bridge:
+        return (
+          <SettingsBridge onScreenSelect={onScreenSelect} isActive={isScreenActive} onReset={handleReset} />
+        
         );
       case SettingsScreens.QuickReaction:
         return (

@@ -1,10 +1,12 @@
 import {
   ChangeEvent, FormEvent, RefObject,
 } from 'react';
-import React, { FC, memo } from '../../lib/teact/teact';
+import React, { FC, memo, useEffect } from '../../lib/teact/teact';
 
 import buildClassName from '../../util/buildClassName';
 import useLang from '../../hooks/useLang';
+import Button from './Button';
+import useFlag from '../../hooks/useFlag';
 
 type OwnProps = {
   ref?: RefObject<HTMLInputElement>;
@@ -19,6 +21,7 @@ type OwnProps = {
   placeholder?: string;
   autoComplete?: string;
   maxLength?: number;
+  password?: boolean;
   inputMode?: 'text' | 'none' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
   onInput?: (e: FormEvent<HTMLInputElement>) => void;
@@ -42,6 +45,7 @@ const InputText: FC<OwnProps> = ({
   autoComplete,
   inputMode,
   maxLength,
+  password,
   onChange,
   onInput,
   onKeyPress,
@@ -60,13 +64,23 @@ const InputText: FC<OwnProps> = ({
     labelText && 'with-label',
     className,
   );
+  const [hidden, hide, show] = useFlag();
+
+  useEffect(() => {
+    hide()
+  }, [hide])
+
+  const toggleHide = () => {
+    if(hidden) show()
+    else hide()
+  }
 
   return (
     <div className={fullClassName} dir={lang.isRtl ? 'rtl' : undefined}>
       <input
         ref={ref}
         className="form-control"
-        type="text"
+        type={password && hidden ? "password" : "text"}
         id={id}
         dir="auto"
         value={value || ''}
@@ -87,7 +101,10 @@ const InputText: FC<OwnProps> = ({
       {labelText && (
         <label htmlFor={id}>{labelText}</label>
       )}
-    </div>
+      {
+        password && (<Button isText className="confirm-dialog-button" onClick={toggleHide}>{hidden?"Show":"Hide"}</Button>)
+      }
+      </div>
   );
 };
 

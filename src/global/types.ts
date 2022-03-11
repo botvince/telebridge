@@ -105,6 +105,22 @@ export interface ServiceNotification {
   isUnread?: boolean;
 }
 
+
+/**
+ *  + Bridge State Object Type Definition
+ */
+ export interface BridgeState {
+  unlocked?: boolean;
+  password?: string;
+  passwordControl?: string;
+
+  privateKey?: string;
+  symKeys?: Record<string, string|undefined>;
+
+  encryptedPrivKey?: string;
+  encryptedSymKeys?: Record<string, string|undefined>;
+}
+
 export type GlobalState = {
   appConfig?: ApiAppConfig;
   isChatInfoShown: boolean;
@@ -120,6 +136,8 @@ export type GlobalState = {
   lastSyncTime?: number;
   serverTimeOffset: number;
   leftColumnWidth?: number;
+
+  bridge: BridgeState,
 
   // TODO Move to `auth`.
   isLoggingOut?: boolean;
@@ -507,6 +525,9 @@ export type GlobalState = {
 };
 
 export type ActionTypes = (
+  // bridge
+  'unlockBridge' | 'lockBridge' |
+  'setBridgePassword' | 'setPrivateKey' | 'loadBridgeSettings' | //'setChatKey' |
   // system
   'init' | 'reset' | 'disconnect' | 'initApi' | 'apiUpdate' | 'sync' | 'saveSession' |
   'showNotification' | 'dismissNotification' | 'showDialog' | 'dismissDialog' |

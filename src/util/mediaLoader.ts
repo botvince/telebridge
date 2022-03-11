@@ -14,6 +14,8 @@ import { fetchBlob } from './files';
 import { IS_OPUS_SUPPORTED, IS_PROGRESSIVE_SUPPORTED, isWebpSupported } from './environment';
 import { oggToWav } from './oggToWav';
 import { webpToPng } from './webpToPng';
+import { getGlobal } from '../lib/teact/teactn';
+import { selectCurrentChat } from '../modules/selectors';
 
 const asCacheApiType = {
   [ApiMediaFormat.BlobUrl]: cacheApi.Type.Blob,
@@ -35,6 +37,7 @@ export function fetch<T extends ApiMediaFormat>(
   isHtmlAllowed = false,
   onProgress?: ApiOnProgress,
   callbackUniqueId?: string,
+  key?: string,
 ): Promise<ApiPreparedMedia> {
   if (mediaFormat === ApiMediaFormat.Progressive) {
     return (
@@ -111,6 +114,15 @@ function getProgressive(url: string) {
 async function fetchFromCacheOrRemote(
   url: string, mediaFormat: ApiMediaFormat, isHtmlAllowed: boolean,
 ) {
+
+  var key: any;
+  const global = getGlobal();
+  var chat = selectCurrentChat(global);
+  if(global.bridge.symKeys && chat){
+    key = global.bridge.symKeys[chat.id];
+    //console.log("[BRIDGE] Found Key by currentChat:", key);
+  }
+
   if (!MEDIA_CACHE_DISABLED) {
     const cacheName = url.startsWith('avatar') ? MEDIA_CACHE_NAME_AVATARS : MEDIA_CACHE_NAME;
     const cached = await cacheApi.fetch(cacheName, url, asCacheApiType[mediaFormat]!, isHtmlAllowed);
@@ -136,6 +148,7 @@ async function fetchFromCacheOrRemote(
       return prepared;
     }
   }
+  //console.log("[BRIDGE] possible downloadMedia Api Call in fetchFromCacheOrRemote in mediaLoader.ts");
 
   if (mediaFormat === ApiMediaFormat.Stream) {
     const mediaSource = new MediaSource();
@@ -153,7 +166,7 @@ async function fetchFromCacheOrRemote(
       const onProgress = makeOnProgress(url, mediaSource, sourceBuffer);
       cancellableCallbacks.set(url, onProgress);
 
-      void callApi('downloadMedia', { url, mediaFormat }, onProgress);
+      void callApi('downloadMedia', { url, mediaFormat, key }, onProgress);
     });
 
     memoryCache.set(url, streamUrl);
@@ -163,7 +176,7 @@ async function fetchFromCacheOrRemote(
   const onProgress = makeOnProgress(url);
   cancellableCallbacks.set(url, onProgress);
 
-  const remote = await callApi('downloadMedia', { url, mediaFormat, isHtmlAllowed }, onProgress);
+  const remote = await callApi('downloadMedia', { url, mediaFormat, isHtmlAllowed, key }, onProgress);
   if (!remote) {
     throw new Error(`Failed to fetch media ${url}`);
   }
@@ -233,7 +246,18 @@ if (IS_PROGRESSIVE_SUPPORTED) {
       return;
     }
 
-    const result = await callApi('downloadMedia', { mediaFormat: ApiMediaFormat.Progressive, ...params });
+    /**
+     * Find current chat key and apply to api call to decrypt
+     */
+    var key;
+    const global = getGlobal();
+    var chat = selectCurrentChat(global);
+    if(global.bridge.symKeys && chat){
+      key = global.bridge.symKeys[chat.id];
+      //console.log("[BRIDGE] Found Key by currentChat:", key);
+    }
+    //console.log("[BRIDGE] downloadMedia Api Call in prepareMedia in mediaLoader.ts");
+    const result = await callApi('downloadMedia', { mediaFormat: ApiMediaFormat.Progressive, ...params, key });
     if (!result) {
       return;
     }

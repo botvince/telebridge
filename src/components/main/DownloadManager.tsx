@@ -1,5 +1,5 @@
 import { FC, memo, useEffect } from '../../lib/teact/teact';
-import { getDispatch, withGlobal } from '../../lib/teact/teactn';
+import { getDispatch, getGlobal, withGlobal } from '../../lib/teact/teactn';
 
 import { Thread } from '../../global/types';
 import { ApiMediaFormat, ApiMessage } from '../../api/types';
@@ -44,8 +44,15 @@ const DownloadManager: FC<StateProps> = ({
             cancelMessageMediaDownload({ message });
             return;
           }
-
-          mediaLoader.fetch(downloadHash, ApiMediaFormat.BlobUrl, true).then((result) => {
+          const globalKeys = getGlobal().bridge.symKeys;
+          mediaLoader.fetch(
+            downloadHash, 
+            ApiMediaFormat.BlobUrl,
+            true,
+            undefined,
+            undefined,
+            globalKeys ? globalKeys[chatId] : undefined)
+          .then((result) => {
             startedDownloads.delete(downloadHash);
             if (result) {
               download(result, getMessageContentFilename(message));
