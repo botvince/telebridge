@@ -115,6 +115,7 @@ const LeftColumn: FC<StateProps> = ({
         case SettingsScreens.Folders:
         case SettingsScreens.General:
         case SettingsScreens.Notifications:
+        case SettingsScreens.Bridge:
         case SettingsScreens.DataStorage:
         case SettingsScreens.Privacy:
         case SettingsScreens.Language:
