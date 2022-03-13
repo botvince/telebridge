@@ -1,12 +1,26 @@
-# Telegram Web Z
+# Telebridge Z
 
-This project won the first prize 🥇 at [Telegram Lightweight Client Contest](https://contest.com/javascript-web-3) and now is an official Telegram client available to anyone at [web.telegram.org/z](https://web.telegram.org/z).
+This project is a fork of the official Telegram Z web client [web.telegram.org/z](https://web.telegram.org/z).
+It adds a custom encryption layer for text and file encryption with manual control over the keys used.
 
-According to the original contest rules, it has nearly zero dependencies and is fully based on its own [Teact](https://github.com/Ajaxy/telegram-tt/tree/master/src/lib/teact) framework (which re-implements React paradigm). It also uses a custom version of [GramJS](https://github.com/gram-js/gramjs) as an MTProto implementation.
+Available at [telebridge.online](https://telebridge.online/).
 
-The project incorporates lots of technologically advanced features, modern Web APIs and techniques: WebSockets, Web Workers and WebAssembly, multi-level caching and PWA, voice recording and media streaming, cryptography and raw binary data operations, optimistic and progressive interfaces, complicated CSS/Canvas/SVG animations, reactive data streams, and so much more.
+# Usage
 
-Feel free to explore, provide feedback and contribute.
+Type "!bridge get" in a chat to get the configured key, and "!bridge set <key>" to set a new key.
+
+Text messages and files (including photos and videos sent without compression) are then encrypted with this key and can only be read by the receiving client if they have set the same key.
+
+
+# Planned Features
+
+- [x] Basic symmetric encryption
+- [ ] GUI for setting and viewing chat keys.
+- [ ] Key file export/import for easy backups.
+- [ ] Semi-automated key exchange with asymmetric keys.
+- [ ] Encryption of uncompressed photo/video files.
+- [ ] Automatic regular reminder for setting new keys. 
+
 
 ## Local setup
 
