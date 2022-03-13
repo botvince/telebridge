@@ -48,7 +48,7 @@ export function renderMessageText(
   //PIN: Text messages are rendered here
 
   return renderTextWithEntities(
-    trimText(text, truncateLength),
+    trimText(finalText, truncateLength),
     entities,
     highlight,
     shouldRenderHqEmoji,
