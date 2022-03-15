@@ -15,6 +15,8 @@ type CipherGCM = crypto.CipherGCMTypes;
 
 const defaultBufferStamp = Buffer.from([0x00, 0x00]);
 
+export type EncryptionStatus = 'encrypted' | 'not_encrypted' | 'wrong_key';
+
 export function addBufferStamp(buffer: Buffer, stamp: Buffer = defaultBufferStamp){
     return Buffer.concat([stamp, buffer]);
 }
@@ -122,6 +124,33 @@ export function decryptText(encryptedText: string, symKey: string, check?: (corr
     }else{
         //console.log("[BRIDGE WARNING] Text is not encrypted correctly:", encryptedText);
         return encryptedText;
+    }
+}
+
+export function decryptTextConfirmEncryption(encryptedText: string, symKey: string)
+: {text: string, status: EncryptionStatus}
+{
+    var parts = encryptedText.split('.');
+    var encryptionStatus: EncryptionStatus;
+    if(parts.length === 3 && parts[0] === ENCRYPTION_PREFIX){
+        var iv = Buffer.from(parts[1], 'base64');
+        var encryptedData = parts[2];
+
+        var decryptedText = decryptSym(encryptedData, symKey, iv);
+
+        if(decryptedText.startsWith(`${CHECK_PREFIX}.`)){
+            decryptedText = decryptedText.slice(2);
+            encryptionStatus = 'encrypted';
+        }else{
+            decryptedText = `[WRONG KEY] ${decryptedText}`;
+            encryptionStatus = 'wrong_key';
+        }
+
+        return {text: decryptedText, status: encryptionStatus};
+    }else{
+        //console.log("[BRIDGE WARNING] Text is not encrypted correctly:", encryptedText);
+        encryptionStatus = 'not_encrypted';
+        return {text: encryptedText, status: encryptionStatus};
     }
 }
 

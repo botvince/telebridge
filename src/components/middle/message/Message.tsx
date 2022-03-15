@@ -74,7 +74,7 @@ import {
 import buildClassName from '../../../util/buildClassName';
 import useEnsureMessage from '../../../hooks/useEnsureMessage';
 import useContextMenuHandlers from '../../../hooks/useContextMenuHandlers';
-import { renderMessageText } from '../../common/helpers/renderMessageText';
+import { renderMessageText, renderMessageTextConfirmEncryption, TextPart } from '../../common/helpers/renderMessageText';
 import { ROUND_VIDEO_DIMENSIONS_PX } from '../../common/helpers/mediaDimensions';
 import { buildContentClassName, isEmojiOnlyMessage } from './helpers/buildContentClassName';
 import { getMinMediaWidth, calculateMediaDimensions } from './helpers/mediaDimensions';
@@ -115,6 +115,7 @@ import ReactionStaticEmoji from '../../common/ReactionStaticEmoji';
 import LocalAnimatedEmoji from '../../common/LocalAnimatedEmoji';
 
 import './Message.scss';
+import { decryptText, EncryptionStatus } from '../../../modules/helpers/bridgeCrypto';
 
 type MessagePositionProperties = {
   isFirstInGroup: boolean;
@@ -330,7 +331,7 @@ const Message: FC<OwnProps & StateProps> = ({
   const hasThread = Boolean(threadInfo) && messageListType === 'thread';
   const customShape = getMessageCustomShape(message);
   const hasAnimatedEmoji = localSticker || animatedEmoji;
-  const hasReactions = reactionMessage?.reactions && !areReactionsEmpty(reactionMessage.reactions);
+  var hasReactions = reactionMessage?.reactions && !areReactionsEmpty(reactionMessage.reactions);
   const asForwarded = (
     forwardInfo
     && (!isChatWithSelf || isScheduled)
@@ -432,37 +433,50 @@ const Message: FC<OwnProps & StateProps> = ({
     botSender,
   );
 
-  const containerClassName = buildClassName(
-    'Message message-list-item',
-    isFirstInGroup && 'first-in-group',
-    isProtected && 'is-protected',
-    isLastInGroup && 'last-in-group',
-    isFirstInDocumentGroup && 'first-in-document-group',
-    isLastInDocumentGroup && 'last-in-document-group',
-    isLastInList && 'last-in-list',
-    isOwn && 'own',
-    Boolean(message.views) && 'has-views',
-    message.isEdited && 'was-edited',
-    hasReply && 'has-reply',
-    isContextMenuShown && 'has-menu-open',
-    isFocused && !noFocusHighlight && 'focused',
-    isForwarding && 'is-forwarding',
-    message.isDeleting && 'is-deleting',
-    isInDocumentGroup && 'is-in-document-group',
-    isAlbum && 'is-album',
-    message.hasUnreadMention && 'has-unread-mention',
-    isSelected && 'is-selected',
-    isInSelectMode && 'is-in-selection-mode',
-    isThreadTop && 'is-thread-top',
-    Boolean(message.inlineButtons) && 'has-inline-buttons',
-    isSwiped && 'is-swiped',
-    transitionClassNames,
-    Boolean(activeReaction) && 'has-active-reaction',
-  );
 
   const {
     text, photo, video, audio, voice, document, sticker, contact, poll, webPage, invoice, location,
   } = getMessageContent(message);
+
+
+  //console.log("[BRIDGE] Build Message.tsx");
+  var textParts: TextPart[] | string[] | undefined;
+  var status: EncryptionStatus = 'not_encrypted';
+  const result = renderMessageTextConfirmEncryption(message, highlight, isEmojiOnlyMessage(customShape));
+  if(result && !Array.isArray(result)){
+    textParts = result.textParts;
+    status = result.status;
+  }else{
+    textParts = result;
+  }
+
+  if(voice || document) status = 'encrypted';
+
+  var reaction;
+  switch(status){
+    case 'encrypted':
+      //reaction = "🔥"
+      break;
+    case 'not_encrypted':
+      reaction = "🤬"
+      break;
+    case 'wrong_key':
+      reaction = "💩";
+      break;
+  }
+
+  if(reaction){
+    if(!message.reactions) {
+      message.reactions = {
+        canSeeList: false,
+        results: [{isChosen:true, count: 1, reaction}],
+        recentReactions: [{userId: 'bridge', reaction}],
+      };
+    }
+    hasReactions = true;
+  }
+
+
 
   const contentClassName = buildContentClassName(message, {
     hasReply,
@@ -478,7 +492,6 @@ const Message: FC<OwnProps & StateProps> = ({
   });
 
   const withAppendix = contentClassName.includes('has-appendix');
-  const textParts = renderMessageText(message, highlight, isEmojiOnlyMessage(customShape));
 
   let metaPosition!: MetaPosition;
   if (isInDocumentGroupNotLast) {
@@ -497,9 +510,9 @@ const Message: FC<OwnProps & StateProps> = ({
       reactionsPosition = 'outside';
     } else if (asForwarded) {
       metaPosition = 'standalone';
-      reactionsPosition = 'inside';
+      reactionsPosition = reaction?'in-meta':'inside';
     } else {
-      reactionsPosition = 'inside';
+      reactionsPosition = reaction?'in-meta':'inside';
     }
   } else {
     reactionsPosition = 'none';
@@ -845,6 +858,34 @@ const Message: FC<OwnProps & StateProps> = ({
       </div>
     );
   }
+
+  const containerClassName = buildClassName(
+    'Message message-list-item',
+    isFirstInGroup && 'first-in-group',
+    isProtected && 'is-protected',
+    isLastInGroup && 'last-in-group',
+    isFirstInDocumentGroup && 'first-in-document-group',
+    isLastInDocumentGroup && 'last-in-document-group',
+    isLastInList && 'last-in-list',
+    isOwn && 'own',
+    Boolean(message.views) && 'has-views',
+    message.isEdited && 'was-edited',
+    hasReply && 'has-reply',
+    isContextMenuShown && 'has-menu-open',
+    isFocused && !noFocusHighlight && 'focused',
+    isForwarding && 'is-forwarding',
+    message.isDeleting && 'is-deleting',
+    isInDocumentGroup && 'is-in-document-group',
+    isAlbum && 'is-album',
+    message.hasUnreadMention && 'has-unread-mention',
+    isSelected && 'is-selected',
+    isInSelectMode && 'is-in-selection-mode',
+    isThreadTop && 'is-thread-top',
+    Boolean(message.inlineButtons) && 'has-inline-buttons',
+    isSwiped && 'is-swiped',
+    transitionClassNames,
+    Boolean(activeReaction) && 'has-active-reaction',
+  );
 
   return (
     <div
