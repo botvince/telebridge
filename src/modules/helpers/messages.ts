@@ -13,6 +13,8 @@ import { getUserFullName } from './users';
 import { IS_OPUS_SUPPORTED, isWebpSupported } from '../../util/environment';
 import { getChatTitle, isUserId } from './chats';
 import parseEmojiOnlyString from '../../components/common/helpers/parseEmojiOnlyString';
+import { getGlobal } from '../../lib/teact/teactn';
+import { decryptText } from './bridgeCrypto';
 
 const RE_LINK = new RegExp(RE_LINK_TEMPLATE, 'i');
 
@@ -47,8 +49,21 @@ export function getMessageText(message: ApiMessage) {
     text, sticker, photo, video, audio, voice, document, poll, webPage, contact, invoice, location,
   } = message.content;
 
-  if (text) {
-    return text.text;
+  if(text){
+    var symKey;
+    var global = getGlobal();
+    if(global.bridge && global.bridge.symKeys){
+      symKey = global.bridge.symKeys[message.chatId];
+    }
+    
+    var finalText;
+    if(symKey){
+      finalText = decryptText(text.text, symKey, () => {});
+    }else{
+      finalText = text.text;
+    }
+
+    return finalText;
   }
 
   if (sticker || photo || video || audio || voice || document
